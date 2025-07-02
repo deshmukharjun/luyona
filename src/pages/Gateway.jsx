@@ -16,7 +16,7 @@ export default function Gateway() {
       {/* CTA Buttons */}
       <div className="w-full">
         <button
-          onClick={() => navigate("/mobile-verification")}
+          onClick={() => navigate("/privacy")}
           className="w-full py-4 mb-3 rounded-xl bg-[#222222] text-white text-sm font-medium"
         >
           I want to join

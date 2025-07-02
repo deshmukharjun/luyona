@@ -3,24 +3,28 @@ import {
   WheelPicker,
   WheelPickerWrapper,
 } from "@ncdai/react-wheel-picker";
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useNavigate } from 'react-router-dom';
 
 // Helper to get days in a month (handles leap years)
 const getDaysInMonth = (year, month) => {
-  // Month is 0-indexed for Date object, so January = 0, December = 11
-  // new Date(year, month + 1, 0) gives the last day of the month
   return new Date(year, month + 1, 0).getDate();
 };
+
+// List of popular locations for autocomplete
+const popularLocations = [
+  "Paris", "Tokyo", "New York", "London", "Sydney",
+  "Rome", "Barcelona", "Amsterdam", "Bangkok", "Cape Town",
+  "Dubai", "San Francisco", "Rio de Janeiro", "Kyoto", "Vancouver"
+];
 
 export default function UserInfo() {
   const [step, setStep] = useState(1);
   const [firstName, setFirstName] = useState("");
-  const [title, setTitle] = useState("Mr");
   const [lastName, setLastName] = useState("");
   const [gender, setGender] = useState("");
   const [customGender, setCustomGender] = useState("");
   const [showOtherDialog, setShowOtherDialog] = useState(false);
-  const [dob, setDob] = useState(""); // Stores date as "YYYY-MM-DD" string
+  const [dob, setDob] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Initialize picker states with a valid date (e.g., current date)
@@ -28,27 +32,58 @@ export default function UserInfo() {
   const [pickerMonth, setPickerMonth] = useState("");
   const [pickerYear, setPickerYear] = useState("");
 
-  // New states for additional steps
+  // States for additional steps
   const [currentLocation, setCurrentLocation] = useState("");
-  const [homeLocation, setHomeLocation] = useState("");
-  const [email, setEmail] = useState("");
-  // Initialize with default values for Instagram and LinkedIn
-  const [instagramUsername, setInstagramUsername] = useState("@");
-  const [linkedInUsername, setLinkedInUsername] = useState("linkedin.com/in/");
+  const [favouriteTravelDestination, setFavouriteTravelDestination] = useState("");
 
+  // States for tag-based inputs
+  const [lastHolidayPlaces, setLastHolidayPlaces] = useState([]);
+  const [currentLastHolidayPlaceInput, setCurrentLastHolidayPlaceInput] = useState("");
+  const [lastHolidaySuggestions, setLastHolidaySuggestions] = useState([]);
+  const [favouritePlacesToGo, setFavouritePlacesToGo] = useState([]);
+  const [currentFavouritePlaceToGoInput, setCurrentFavouritePlaceToGoInput] = useState("");
+  const [favouritePlaceSuggestions, setFavouritePlaceSuggestions] = useState([]);
+
+  const [email, setEmail] = useState("");
   const [showVerificationPopup, setShowVerificationPopup] = useState(false);
-  const [verificationType, setVerificationType] = useState(""); // 'email', 'instagram', 'linkedin'
+  const [verificationType, setVerificationType] = useState("");
   const [verificationValue, setVerificationValue] = useState("");
 
-  const navigate = useNavigate(); // Initialize useNavigate hook
+  const navigate = useNavigate();
 
   // Effect to synchronize picker states when DOB changes or picker is shown
   useEffect(() => {
     const initialDate = dob ? new Date(dob) : new Date();
     setPickerDay(String(initialDate.getDate()));
-    setPickerMonth(String(initialDate.getMonth() + 1)); // 1-indexed
+    setPickerMonth(String(initialDate.getMonth() + 1));
     setPickerYear(String(initialDate.getFullYear()));
   }, [dob, showDatePicker]);
+
+  // Effect for autocomplete suggestions for Last Holiday Places
+  useEffect(() => {
+    if (currentLastHolidayPlaceInput.trim() === "") {
+      setLastHolidaySuggestions([]);
+      return;
+    }
+    const input = currentLastHolidayPlaceInput.toLowerCase();
+    const suggestions = popularLocations.filter(location =>
+      location.toLowerCase().startsWith(input)
+    );
+    setLastHolidaySuggestions(suggestions);
+  }, [currentLastHolidayPlaceInput]);
+
+  // Effect for autocomplete suggestions for Favourite Places to Go
+  useEffect(() => {
+    if (currentFavouritePlaceToGoInput.trim() === "") {
+      setFavouritePlaceSuggestions([]);
+      return;
+    }
+    const input = currentFavouritePlaceToGoInput.toLowerCase();
+    const suggestions = popularLocations.filter(location =>
+      location.toLowerCase().startsWith(input)
+    );
+    setFavouritePlaceSuggestions(suggestions);
+  }, [currentFavouritePlaceToGoInput]);
 
   // Adjust pickerDay if month/year changes and the day becomes invalid
   const updatePickerDayBasedOnMonthYear = useCallback((year, month, day) => {
@@ -60,70 +95,42 @@ export default function UserInfo() {
   }, []);
 
   // Total logical steps for the progress bar
-  // 1. Name, 2. Gender, 3. Age, 4. Location,
-  // 5. Email (input + confirmation), 6. Instagram (input + confirmation), 7. LinkedIn (input + confirmation)
-  const totalSteps = 7;
+  const totalSteps = 8;
   const progress = (step / totalSteps) * 100;
 
   const handleNext = () => {
-    // If current step is 5 (Email input), 6 (Instagram input), or 7 (LinkedIn input),
-    // trigger the verification popup. The actual step increment happens in handleVerificationConfirm.
-    if (step === 5 && isStepFiveValid) {
+    if (step === 8 && isStepEightValid) {
       setVerificationType('email');
       setVerificationValue(email);
       setShowVerificationPopup(true);
-    } else if (step === 6 && isStepSixValid) {
-      setVerificationType('instagram');
-      // Ensure we pass the clean username to the popup
-      setVerificationValue(instagramUsername.startsWith('@') ? instagramUsername.substring(1) : instagramUsername);
-      setShowVerificationPopup(true);
-    } else if (step === 7 && isStepSevenValid) {
-      setVerificationType('linkedin');
-      // Ensure we pass the clean URL part to the popup
-      setVerificationValue(linkedInUsername.replace('linkedin.com/in/', ''));
-      setShowVerificationPopup(true);
     } else if (step < totalSteps) {
-      // For non-verification steps (1-4), simply advance the step
       setStep(step + 1);
-    } else {
-      // This case should ideally not be reached if the final step correctly triggers a popup
-      // before navigating. It's a fallback.
-      console.log("Unexpected call to handleNext on last step without popup.");
     }
   };
 
   const handleBack = () => {
-    if (step === 1) return navigate(-1); // Go back in browser history
+    if (step === 1) return navigate(-1);
     setStep(step - 1);
   };
 
   const handleVerificationConfirm = () => {
     setShowVerificationPopup(false);
-    // After confirming, proceed to the next logical step
-    if (step < totalSteps) {
-      setStep(step + 1);
-    } else if (step === totalSteps) {
-      // This is the final confirmation (LinkedIn)
-      console.log({
-        firstName,
-        lastName,
-        title,
-        gender: gender === "Other" ? customGender : gender,
-        dob,
-        currentLocation,
-        homeLocation,
-        email,
-        instagramUsername: instagramUsername === "@" ? "" : instagramUsername,
-        linkedInUsername: linkedInUsername === "linkedin.com/in/" ? "" : linkedInUsername,
-      });
-      // Route the user to referral.jsx using navigate
-      navigate('/referral');
-    }
+    console.log({
+      firstName,
+      lastName,
+      gender: gender === "Other" ? customGender : gender,
+      dob,
+      currentLocation,
+      favouriteTravelDestination,
+      lastHolidayPlaces,
+      favouritePlacesToGo,
+      email,
+    });
+    navigate('/referral');
   };
 
   const handleVerificationEdit = () => {
     setShowVerificationPopup(false);
-    // User stays on the same step to edit the value, no step change needed
   };
 
   // Generate options for the WheelPicker components
@@ -159,12 +166,59 @@ export default function UserInfo() {
 
   const handleDateConfirm = () => {
     const year = Number(pickerYear);
-    const month = Number(pickerMonth); // 1-indexed
+    const month = Number(pickerMonth);
     const day = Number(updatePickerDayBasedOnMonthYear(pickerYear, pickerMonth, pickerDay));
 
     const selectedDate = new Date(year, month - 1, day);
     setDob(selectedDate.toISOString().split('T')[0]);
     setShowDatePicker(false);
+  };
+
+  // Helper function to parse place name and details
+  const parsePlaceInput = (input) => {
+    const match = input.match(/(.+?)\s*\((.+)\)/);
+    if (match) {
+      return { name: match[1].trim(), details: match[2].trim() };
+    }
+    return { name: input.trim(), details: "" };
+  };
+
+  // Handlers for Last Holiday Places (Step 6)
+  const handleAddLastHolidayPlace = (e) => {
+    if (e.key === 'Enter' && currentLastHolidayPlaceInput.trim() !== '') {
+      const { name, details } = parsePlaceInput(currentLastHolidayPlaceInput);
+      setLastHolidayPlaces(prev => [...prev, { id: Date.now(), name, details }]);
+      setCurrentLastHolidayPlaceInput("");
+      setLastHolidaySuggestions([]);
+    }
+  };
+
+  const handleRemoveLastHolidayPlace = (id) => {
+    setLastHolidayPlaces(prev => prev.filter(place => place.id !== id));
+  };
+
+  const handleLastHolidaySuggestionClick = (suggestion) => {
+    setCurrentLastHolidayPlaceInput(suggestion);
+    setLastHolidaySuggestions([]);
+  };
+
+  // Handlers for Favourite Places to Go (Step 7)
+  const handleAddFavouritePlaceToGo = (e) => {
+    if (e.key === 'Enter' && currentFavouritePlaceToGoInput.trim() !== '') {
+      const { name, details } = parsePlaceInput(currentFavouritePlaceToGoInput);
+      setFavouritePlacesToGo(prev => [...prev, { id: Date.now(), name, details }]);
+      setCurrentFavouritePlaceToGoInput("");
+      setFavouritePlaceSuggestions([]);
+    }
+  };
+
+  const handleRemoveFavouritePlaceToGo = (id) => {
+    setFavouritePlacesToGo(prev => prev.filter(place => place.id !== id));
+  };
+
+  const handleFavouritePlaceSuggestionClick = (suggestion) => {
+    setCurrentFavouritePlaceToGoInput(suggestion);
+    setFavouritePlaceSuggestions([]);
   };
 
   // Validation for each step's input fields
@@ -181,13 +235,11 @@ export default function UserInfo() {
     }
     return age >= 18;
   }, [dob]);
-  const isStepFourValid = currentLocation.trim() && homeLocation.trim();
-  const isStepFiveValid = email.trim() && /\S+@\S+\.\S+/.test(email); // Basic email validation
-  // Instagram validation: must be more than just "@"
-  const isStepSixValid = instagramUsername.trim() !== "@";
-  // LinkedIn validation: must be more than just "linkedin.com/in/"
-  const isStepSevenValid = linkedInUsername.trim() !== "linkedin.com/in/";
-
+  const isStepFourValid = currentLocation.trim();
+  const isStepFiveValid = favouriteTravelDestination.trim();
+  const isStepSixValid = lastHolidayPlaces.length >= 3;
+  const isStepSevenValid = favouritePlacesToGo.length >= 3;
+  const isStepEightValid = email.trim() && /\S+@\S+\.\S+/.test(email);
 
   const getNextButtonDisabled = () => {
     switch (step) {
@@ -198,43 +250,26 @@ export default function UserInfo() {
       case 5: return !isStepFiveValid;
       case 6: return !isStepSixValid;
       case 7: return !isStepSevenValid;
+      case 8: return !isStepEightValid;
       default: return true;
     }
   };
 
   const getNextButtonText = () => {
-    // This function now only determines the text for the input screens' "Next" button
     return "Next";
   };
 
   const VerificationPopup = ({ type, value, onConfirm, onEdit }) => {
-    let title = "";
-    let displayValue = value; // Default to raw value
-    let confirmButtonText = "Looks Good"; // Default for all confirmations
-
-    switch (type) {
-      case 'email':
-        title = "Confirm Email Address";
-        break;
-      case 'instagram':
-        title = "Confirm Instagram Username";
-        displayValue = `@${value}`; // Prepend '@' for display
-        break;
-      case 'linkedin':
-        title = "Confirm LinkedIn Profile";
-        displayValue = `linkedin.com/in/${value}`; // Prepend base URL for display
-        // As requested, the CTA for LinkedIn confirmation remains "Looks Good"
-        break;
-      default:
-        return null;
-    }
+    let title = "Confirm Email Address";
+    let displayValue = value;
+    let confirmButtonText = "Looks Good";
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
         <div className="w-full bg-white p-6 rounded-t-xl shadow-lg relative">
           <h2 className="text-xl font-semibold mb-2 text-center">{title}</h2>
           <p className="text-gray-500 text-center text-sm mb-6">
-            Please confirm your {type.replace('linkedin', 'LinkedIn profile').replace('email', 'email address').replace('instagram', 'Instagram username')} for verification and account recovery.
+            Please confirm your email address for verification and account recovery.
           </p>
           <div className="flex justify-center mb-6">
             <img src="/verify.svg" alt="Verify" className="w-24 h-24" />
@@ -256,8 +291,6 @@ export default function UserInfo() {
 
   return (
     <div className="h-screen bg-white px-6 pt-10 flex flex-col font-sans">
-
-
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button
@@ -271,8 +304,8 @@ export default function UserInfo() {
         </div>
         <div style={{ width: 24 }}></div>
       </div>
-      
-            {/* Top Progress Bar */}
+
+      {/* Top Progress Bar */}
       <div className="w-full bg-gray-200 rounded-full h-1.5 mb-6">
         <div
           className="bg-[#222222] h-1.5 rounded-full transition-all duration-300"
@@ -284,27 +317,21 @@ export default function UserInfo() {
       {step === 1 && (
         <>
           <h1 className="text-xl font-semibold mb-4">Let's start with your Full name.</h1>
+          <label htmlFor="firstName" className="text-sm font-medium text-gray-700 mb-1">First Name</label>
           <div className="flex gap-2 mb-4">
-            <select
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="px-3 py-3 border border-gray-200 rounded-lg text-sm"
-            >
-              <option>Mr</option>
-              <option>Mrs</option>
-              <option>Miss</option>
-              <option>Ms</option>
-            </select>
             <input
               type="text"
+              id="firstName"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               placeholder="First name"
               className="flex-1 px-4 py-3 border border-gray-200 rounded-lg text-sm"
             />
           </div>
+          <label htmlFor="lastName" className="text-sm font-medium text-gray-700 mb-1">Last Name</label>
           <input
             type="text"
+            id="lastName"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             placeholder="Last name"
@@ -473,7 +500,7 @@ export default function UserInfo() {
         </>
       )}
 
-      {/* Step 4: Location Details */}
+      {/* Step 4: Current Location Details */}
       {step === 4 && (
         <>
           <h1 className="text-xl font-semibold mb-4">Where are you living currently?</h1>
@@ -491,27 +518,7 @@ export default function UserInfo() {
                 onClick={() => setCurrentLocation("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
               >
-                &times;
-              </button>
-            )}
-          </div>
-
-          <h1 className="text-xl font-semibold mb-4">Where are you from?</h1>
-          <p className="text-sm text-gray-500 mb-6">This will help users see which city you are originally from.</p>
-          <div className="relative mb-6">
-            <input
-              type="text"
-              value={homeLocation}
-              onChange={(e) => setHomeLocation(e.target.value)}
-              placeholder="Mumbai"
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm pr-10"
-            />
-            {homeLocation && (
-              <button
-                onClick={() => setHomeLocation("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
-              >
-                &times;
+                ×
               </button>
             )}
           </div>
@@ -528,8 +535,190 @@ export default function UserInfo() {
         </>
       )}
 
-      {/* Step 5: Email Verification */}
+      {/* Step 5: Favourite Travel Destination */}
       {step === 5 && (
+        <>
+          <h1 className="text-xl font-semibold mb-4">What is your favourite travel destination?</h1>
+          <p className="text-sm text-gray-500 mb-6">Enter your dream destination</p>
+          <div className="relative mb-6">
+            <input
+              type="text"
+              value={favouriteTravelDestination}
+              onChange={(e) => setFavouriteTravelDestination(e.target.value)}
+              placeholder="e.g., Paris"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm pr-10"
+            />
+            {favouriteTravelDestination && (
+              <button
+                onClick={() => setFavouriteTravelDestination("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <button
+            disabled={getNextButtonDisabled()}
+            onClick={handleNext}
+            className={`w-full py-4 rounded-xl text-white font-medium text-sm ${
+              getNextButtonDisabled() ? "bg-gray-300 cursor-not-allowed" : "bg-[#222222]"
+            }`}
+          >
+            {getNextButtonText()}
+          </button>
+        </>
+      )}
+
+      {/* Step 6: Last Holiday Places - Tag Input with Autocomplete */}
+      {step === 6 && (
+        <>
+          <h1 className="text-xl font-semibold mb-4">Where did you go on your last holiday?</h1>
+          <p className="text-sm text-gray-500 mb-6">Enter minimum 3 places</p>
+
+          {/* Display existing tags */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {lastHolidayPlaces.map((place) => (
+              <div
+                key={place.id}
+                className="bg-[#222222] text-white px-3 py-2 rounded-lg flex items-center text-sm"
+              >
+                <span>{place.name}</span>
+                {place.details && (
+                  <span className="text-gray-300 ml-1 text-xs">({place.details})</span>
+                )}
+                <button
+                  onClick={() => handleRemoveLastHolidayPlace(place.id)}
+                  className="ml-2 text-white opacity-70 hover:opacity-100"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Input for new tags with autocomplete */}
+          <div className="relative mb-6">
+            <input
+              type="text"
+              value={currentLastHolidayPlaceInput}
+              onChange={(e) => setCurrentLastHolidayPlaceInput(e.target.value)}
+              onKeyDown={handleAddLastHolidayPlace}
+              placeholder="Type a place & press Enter (e.g., Paris)"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm pr-10"
+            />
+            {currentLastHolidayPlaceInput && (
+              <button
+                onClick={() => {
+                  setCurrentLastHolidayPlaceInput("");
+                  setLastHolidaySuggestions([]);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
+              >
+                ×
+              </button>
+            )}
+            {lastHolidaySuggestions.length > 0 && (
+              <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 max-h-40 overflow-y-auto">
+                {lastHolidaySuggestions.map((suggestion, index) => (
+                  <li
+                    key={index}
+                    onClick={() => handleLastHolidaySuggestionClick(suggestion)}
+                    className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                  >
+                    {suggestion}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <button
+            disabled={getNextButtonDisabled()}
+            onClick={handleNext}
+            className={`w-full py-4 rounded-xl text-white font-medium text-sm ${
+              getNextButtonDisabled() ? "bg-gray-300 cursor-not-allowed" : "bg-[#222222]"
+            } mt-2`}
+          >
+            {getNextButtonText()}
+          </button>
+        </>
+      )}
+
+      {/* Step 7: Favourite Places to Go To - Tag Input with Autocomplete */}
+      {step === 7 && (
+        <>
+          <h1 className="text-xl font-semibold mb-4">What are your three favourite places to go to?</h1>
+          <p className="text-sm text-gray-500 mb-6">Enter minimum 3 places</p>
+
+          {/* Display existing tags */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {favouritePlacesToGo.map((place) => (
+              <div
+                key={place.id}
+                className="bg-[#222222] text-white px-3 py-2 rounded-lg flex items-center text-sm"
+              >
+                <span>{place.name}</span>
+                {place.details && (
+                  <span className="text-gray-300 ml-1 text-xs">({place.details})</span>
+                )}
+                <button
+                  onClick={() => handleRemoveFavouritePlaceToGo(place.id)}
+                  className="ml-2 text-white opacity-70 hover:opacity-100"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Input for new tags with autocomplete */}
+          <div className="relative mb-6">
+            <input
+              type="text"
+              value={currentFavouritePlaceToGoInput}
+              onChange={(e) => setCurrentFavouritePlaceToGoInput(e.target.value)}
+              onKeyDown={handleAddFavouritePlaceToGo}
+              placeholder="Type a place & press Enter (e.g., Paris)"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm pr-10"
+            />
+            {currentFavouritePlaceToGoInput && (
+              <button
+                onClick={() => {
+                  setCurrentFavouritePlaceToGoInput("");
+                  setFavouritePlaceSuggestions([]);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
+              >
+                ×
+              </button>
+            )}
+            {favouritePlaceSuggestions.length > 0 && (
+              <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 max-h-40 overflow-y-auto">
+                {favouritePlaceSuggestions.map((suggestion, index) => (
+                  <li
+                    key={index}
+                    onClick={() => handleFavouritePlaceSuggestionClick (suggestion)}
+                    className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                  >
+                    {suggestion}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <button
+            disabled={getNextButtonDisabled()}
+            onClick={handleNext}
+            className={`w-full py-4 rounded-xl text-white font-medium text-sm ${
+              getNextButtonDisabled() ? "bg-gray-300 cursor-not-allowed" : "bg-[#222222]"
+            } mt-2`}
+          >
+            {getNextButtonText()}
+          </button>
+        </>
+      )}
+
+      {/* Step 8: Email Verification */}
+      {step === 8 && (
         <>
           <h1 className="text-xl font-semibold mb-6">What's your email?</h1>
           <div className="relative mb-6">
@@ -545,97 +734,7 @@ export default function UserInfo() {
                 onClick={() => setEmail("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
               >
-                &times;
-              </button>
-            )}
-          </div>
-          <button
-            disabled={getNextButtonDisabled()}
-            onClick={handleNext}
-            className={`w-full py-4 rounded-xl text-white font-medium text-sm ${
-              getNextButtonDisabled() ? "bg-gray-300 cursor-not-allowed" : "bg-[#222222]"
-            }`}
-          >
-            {getNextButtonText()}
-          </button>
-        </>
-      )}
-
-      {/* Step 6: Instagram Verification */}
-      {step === 6 && (
-        <>
-          <h1 className="text-xl font-semibold mb-6">What's your Instagram?</h1>
-          <div className="relative mb-6">
-            <input
-              type="text"
-              value={instagramUsername}
-              onChange={(e) => {
-                let val = e.target.value;
-                if (!val.startsWith('@')) {
-                  val = '@' + val;
-                }
-                setInstagramUsername(val);
-              }}
-              onFocus={(e) => {
-                if (e.target.value === '@') {
-                  e.target.setSelectionRange(1, 1);
-                }
-              }}
-              placeholder="@yourinstagram"
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm pr-10"
-            />
-            {instagramUsername !== "@" && (
-              <button
-                onClick={() => setInstagramUsername("@")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
-              >
-                &times;
-              </button>
-            )}
-          </div>
-          <button
-            disabled={getNextButtonDisabled()}
-            onClick={handleNext}
-            className={`w-full py-4 rounded-xl text-white font-medium text-sm ${
-              getNextButtonDisabled() ? "bg-gray-300 cursor-not-allowed" : "bg-[#222222]"
-            }`}
-          >
-            {getNextButtonText()}
-          </button>
-        </>
-      )}
-
-      {/* Step 7: LinkedIn Verification */}
-      {step === 7 && (
-        <>
-          <h1 className="text-xl font-semibold mb-6">What's your LinkedIn?</h1>
-          <div className="relative mb-6">
-            <input
-              type="text"
-              value={linkedInUsername}
-              onChange={(e) => {
-                const prefix = "linkedin.com/in/";
-                let val = e.target.value;
-                if (!val.startsWith(prefix)) {
-                  val = prefix + val.replace(prefix, '');
-                }
-                setLinkedInUsername(val);
-              }}
-              onFocus={(e) => {
-                const prefix = "linkedin.com/in/";
-                if (e.target.value === prefix) {
-                  e.target.setSelectionRange(prefix.length, prefix.length);
-                }
-              }}
-              placeholder="linkedin.com/in/yourprofile"
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm pr-10"
-            />
-            {linkedInUsername !== "linkedin.com/in/" && (
-              <button
-                onClick={() => setLinkedInUsername("linkedin.com/in/")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
-              >
-                &times;
+                ×
               </button>
             )}
           </div>

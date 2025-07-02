@@ -3,30 +3,18 @@ import { useNavigate } from 'react-router-dom';
 
 export default function Referral() {
   const [step, setStep] = useState(1);
-  const [showContactsPopup, setShowContactsPopup] = useState(false);
-  const [referralCode, setReferralCode] = useState(['', '', '', '', '', '']); // Array for 6 digits
-  const inputRefs = React.useRef([]); // To manage focus for referral code inputs
-  const navigate = useNavigate(); // Hook for navigation
+  const [referralCode, setReferralCode] = useState(['', '', '', '', '', '']);
+  const inputRefs = React.useRef([]);
+  const navigate = useNavigate();
 
-  const totalSteps = 2; // "See who you know" -> "Enter referral code"
+  // State to control the visibility of the invalid code modal
+  const [showInvalidCodeModal, setShowInvalidCodeModal] = useState(false);
+  // NEW State for the Contact Permission Modal
+  const [showContactPermissionModal, setShowContactPermissionModal] = useState(false);
+
+
+  const totalSteps = 2;
   const progress = (step / totalSteps) * 100;
-
-  const handleSeeWhoYouKnow = () => {
-    // Show the contacts access popup
-    setShowContactsPopup(true);
-  };
-
-  const handleAllowContacts = () => {
-    // In a real app, you'd request contact permissions here.
-    // For this example, we just proceed to the next step.
-    setShowContactsPopup(false);
-    setStep(2); // Move to the referral code input step
-  };
-
-  const handleDonAllowContacts = () => {
-    setShowContactsPopup(false);
-    setStep(2); // Move to the referral code input step even if not allowed
-  };
 
   const handleReferralCodeChange = (e, index) => {
     const { value } = e.target;
@@ -35,17 +23,12 @@ export default function Referral() {
     if (value.length === 1 && /^\d$/.test(value)) {
       newCode[index] = value;
       setReferralCode(newCode);
-
-      // Move focus to the next input if current one is filled
       if (index < referralCode.length - 1 && inputRefs.current[index + 1]) {
         inputRefs.current[index + 1].focus();
       }
     } else if (value.length === 0) {
-      // Allow clearing a digit
       newCode[index] = '';
       setReferralCode(newCode);
-
-      // Move focus to the previous input if current one is cleared and not the first
       if (index > 0 && inputRefs.current[index - 1]) {
         inputRefs.current[index - 1].focus();
       }
@@ -53,7 +36,6 @@ export default function Referral() {
   };
 
   const handleReferralCodeKeyDown = (e, index) => {
-    // Handle backspace to move focus to previous input
     if (e.key === 'Backspace' && referralCode[index] === '' && index > 0) {
       inputRefs.current[index - 1].focus();
     }
@@ -63,28 +45,48 @@ export default function Referral() {
     const code = referralCode.join('');
     if (code.length === 6 && /^\d{6}$/.test(code)) {
       console.log("Referral Code Submitted:", code);
-      // Route to /waitlist-status
-      navigate('/waitlist-status'); // Changed route path
+      navigate('/application-status');
     } else {
-      alert("Please enter a valid 6-digit referral code.");
+      setShowInvalidCodeModal(true); // Show the custom iOS-style modal
     }
   };
 
   const handleBack = () => {
     if (step === 1) {
-      navigate(-1); // Go back in history if on the first step
+      navigate(-1);
     } else if (step === 2) {
-      setStep(1); // Go back to step 1 from step 2
+      setStep(1);
     }
   };
 
-  // Check if referral code is complete
+  // MODIFIED: handleNext now shows the contact permission modal
+  const handleNext = () => {
+    setShowContactPermissionModal(true);
+  };
+
+  // NEW: Function to handle actions within the contact permission modal
+  const handleContactModalAction = (action) => {
+    setShowContactPermissionModal(false); // Close the modal
+    // In both cases (allow/deny), proceed to step 2
+    setStep(2);
+    // You could add specific logic here if 'allow' or 'deny' needs different handling later
+    // For now, both move to the next step
+    if (action === 'allow') {
+      console.log('User allowed contact access.');
+    } else {
+      console.log('User denied contact access.');
+    }
+  };
+
   const isReferralCodeComplete = referralCode.every(digit => digit !== '' && /^\d$/.test(digit));
+
+  // Function to close the invalid code modal
+  const handleCloseInvalidCodeModal = () => {
+    setShowInvalidCodeModal(false);
+  };
 
   return (
     <div className="h-screen bg-white px-6 pt-10 flex flex-col font-sans">
-
-
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button
@@ -98,7 +100,7 @@ export default function Referral() {
         </div>
         <div style={{ width: 24 }}></div>
       </div>
-      
+
       {/* Top Progress Bar */}
       <div className="w-full bg-gray-200 rounded-full h-1.5 mb-6">
         <div
@@ -110,45 +112,51 @@ export default function Referral() {
       {/* Step 1: Add Referrals */}
       {step === 1 && (
         <>
-          <h1 className="text-xl font-semibold mb-4">Add your referrals</h1>
-          <p className="text-sm text-gray-500 mb-6">
-            Our review committee prioritize your connection to our community.
-          </p>
-          <p className="text-sm text-gray-500 flex-grow"> {/* flex-grow to push CTA to bottom */}
-            On the next screen, allow full access to your contacts to add referrals and help our committee understand your connection within our community.
-          </p>
+          {/* Centered logo and text */}
+          <div className="flex flex-col items-center justify-center flex-1">
+            <img src="/referral.png" alt="Lock" className="h-32 mb-4" />
+            <h1 className="text-xl font-semibold text-black mb-2 text-center">
+              Add your referrals
+            </h1>
+            <p className="text-center text-gray-500 text-sm max-w-md">
+              You’re not getting in alone. Drop a name,
+            </p>
+            <p className="text-center text-gray-500 text-sm max-w-md mb-6">get their nod, and we’ll hold the door.</p>
+          </div>
 
-          {/* Removed the orange 'F' logo div */}
-
-          <button
-            onClick={handleSeeWhoYouKnow}
-            className="w-full py-4 rounded-xl text-white font-medium text-sm bg-[#222222] sticky bottom-6" // Sticky to bottom
-            style={{ marginBottom: 'env(safe-area-inset-bottom)' }} // For iPhone notch area
-          >
-            See who you know
-          </button>
+          {/* CTA Button */}
+          <div className="w-full mb-10">
+            <button
+              onClick={handleNext}
+              className="w-full py-4 rounded-xl bg-[#222222] text-white text-sm font-medium hover:bg-[#333333] transition-colors"
+            >
+              Next
+            </button>
+          </div>
         </>
       )}
 
       {/* Step 2: Enter Referral Code */}
       {step === 2 && (
         <>
-          <h1 className="text-xl font-semibold mb-4">Referral code</h1>
+          <h1 className="text-xl font-semibold mb-4">Enter Referral Code</h1>
           <p className="text-sm text-gray-500 mb-6">
             Please enter your 6-digit referral code below
           </p>
 
-          <div className="flex justify-center gap-2 mb-8">
+          <div className="flex justify-center gap-3 mb-8">
             {referralCode.map((digit, index) => (
               <input
                 key={index}
-                type="text"
+                type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 maxLength="1"
                 value={digit}
                 onChange={(e) => handleReferralCodeChange(e, index)}
                 onKeyDown={(e) => handleReferralCodeKeyDown(e, index)}
-                ref={el => inputRefs.current[index] = el}
-                className="w-12 h-16 text-center text-2xl font-bold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                ref={el => (inputRefs.current[index] = el)}
+                className="w-14 h-14 text-center text-xl font-semibold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#222222] focus:border-transparent"
               />
             ))}
           </div>
@@ -157,34 +165,58 @@ export default function Referral() {
             onClick={handleSubmitReferralCode}
             disabled={!isReferralCodeComplete}
             className={`w-full py-4 rounded-xl text-white font-medium text-sm ${
-              isReferralCodeComplete ? "bg-[#222222]" : "bg-gray-300 cursor-not-allowed"
-            }`}
+              isReferralCodeComplete
+                ? "bg-[#222222] hover:bg-[#333333]"
+                : "bg-gray-300 cursor-not-allowed"
+            } transition-colors`}
           >
             Submit
           </button>
         </>
       )}
 
-      {/* Contacts Access Pop-up */}
-      {showContactsPopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> {/* Center vertically and horizontally */}
-          <div className="w-full max-w-sm bg-gray-700 p-6 rounded-xl shadow-lg relative text-white text-center"> {/* Dark background for popup */}
-            <h2 className="text-lg font-semibold mb-2"> {/* Smaller title font size */}
-              "Luyona" would like to access your contcts
-            </h2>
-            <p className="text-gray-300 text-xs mb-6"> {/* Smaller text, lighter color */}
-              To better understand your connection to our community, we recommend allowing full access on the next steps
+      {/* Simulated iOS-style Invalid Code Modal (existing) */}
+      {showInvalidCodeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 max-w-xs w-full text-center">
+            <p className="text-lg font-semibold mb-2">Invalid Referral Code</p>
+            <p className="text-gray-600 text-sm mb-6">
+              Please enter a valid 6-digit referral code.
             </p>
-            <div className="flex flex-col gap-3"> {/* Vertical stack for buttons */}
+            <div className="flex flex-col space-y-2">
               <button
-                onClick={handleDonAllowContacts}
-                className="w-full py-3 rounded-lg text-white bg-transparent border border-white font-medium text-sm" // White border, transparent background
+                onClick={handleCloseInvalidCodeModal}
+                className="w-full py-3 rounded-lg text-blue-600 font-bold border-t border-gray-200 pt-3"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW: Simulated iOS-style Contact Permission Modal */}
+      {showContactPermissionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-[#515151] rounded-xl shadow-lg w-72 text-center overflow-hidden">
+            <div className="p-4 pt-5">
+              <p className="text-white text-[17px] font-semibold mb-1">
+                "Luyona" would like to access your contacts
+              </p>
+              <p className="text-[#D0D0D0] text-[13px] leading-tight px-2">
+                To better understand your connection to our community, we recommend allowing full access on the next steps
+              </p>
+            </div>
+            <div className="flex border-t border-[#636363]">
+              <button
+                onClick={() => handleContactModalAction('deny')}
+                className="flex-1 py-2 text-blue-400 font-normal text-[17px] border-r border-[#636363]"
               >
                 Don't allow
               </button>
               <button
-                onClick={handleAllowContacts}
-                className="w-full py-3 rounded-lg text-gray-700 bg-white font-medium text-sm" // White background, dark text
+                onClick={() => handleContactModalAction('allow')}
+                className="flex-1 py-2 text-blue-400 font-normal text-[17px]"
               >
                 Allow
               </button>

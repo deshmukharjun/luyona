@@ -205,7 +205,7 @@ export default function MobileVerification() {
           <div className="mb-8 w-24 h-24 relative animate-success-burst flex justify-center items-center">
             {/* The circle and checkmark are combined in the image as a single element for simplicity */}
             <div className="absolute inset-0 bg-gray-200 rounded-full animate-pulse-background"></div> {/* Faint pulsing background */}
-            <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center z-10">
+            <div className="w-20 h-20 bg-lime-500 rounded-full flex items-center justify-center z-10">
               <img src="/success.svg" alt="Success Check" className="w-10 h-10" /> {/* Assuming check-white.svg exists */}
             </div>
             {/* Confetti-like elements from the screenshot */}
