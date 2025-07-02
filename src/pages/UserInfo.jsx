@@ -23,7 +23,7 @@ export default function UserInfo() {
   const [lastName, setLastName] = useState("");
   const [gender, setGender] = useState("");
   const [customGender, setCustomGender] = useState("");
-  const [showOtherDialog, setShowOtherDialog] = useState(false);
+  const [showOtherOptions, setShowOtherOptions] = useState(false);
   const [dob, setDob] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -373,10 +373,10 @@ export default function UserInfo() {
                 checked={gender === option}
                 onChange={() => {
                   setGender(option);
-                  if (option === "Other") {
-                    setShowOtherDialog(true);
-                  } else {
-                    setShowOtherDialog(false);
+                  // Only show the "Other" specific options if "Other" is selected
+                  setShowOtherOptions(option === "Other");
+                  // Clear customGender if "Other" is deselected
+                  if (option !== "Other") {
                     setCustomGender("");
                   }
                 }}
@@ -385,22 +385,47 @@ export default function UserInfo() {
             </label>
           ))}
 
-          {showOtherDialog && (
-            <div className="mb-4">
-              <input
-                type="text"
-                value={customGender}
-                onChange={(e) => setCustomGender(e.target.value)}
-                placeholder="Enter your gender"
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm"
-              />
+          {/* Display other gender options when 'Other' is selected */}
+          {showOtherOptions && (
+            <div className="border border-gray-200 rounded-lg p-4 mt-3">
+              <p className="text-sm font-semibold mb-3">Please specify:</p>
+              {[
+                "Non-Binary", // This seems to be duplicated from the main options, but keeping it as per image
+                "Genderqueer",
+                "Agender",
+                "Bigender",
+                "Genderfluid",
+                "Transgender",
+                "Transmasculine",
+                "Transfeminine",
+                "Two-Spirit",
+                "Intersex",
+                "Demiboy",
+                "Demigirl",
+                "Third Gender",
+              ].map((otherOption) => (
+                <label
+                  key={otherOption}
+                  className="flex items-center justify-between py-2 cursor-pointer"
+                >
+                  <span>{otherOption}</span>
+                  <input
+                    type="radio"
+                    name="customGenderOption" // Use a different name for the nested radio buttons
+                    value={otherOption}
+                    checked={customGender === otherOption}
+                    onChange={() => setCustomGender(otherOption)}
+                    className="accent-[#222222]"
+                  />
+                </label>
+              ))}
             </div>
           )}
 
           <button
             disabled={getNextButtonDisabled()}
             onClick={handleNext}
-            className={`w-full py-4 rounded-xl text-white font-medium text-sm ${
+            className={`w-full py-4 mb-5 rounded-xl text-white font-medium text-sm ${
               getNextButtonDisabled() ? "bg-gray-300 cursor-not-allowed" : "bg-[#222222]"
             } mt-4`}
           >
