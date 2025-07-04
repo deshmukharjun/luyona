@@ -38,7 +38,7 @@ export default function WaitlistStatus() {
                 <img src="/success.svg" alt="Approved Check" className="w-10 h-10 filter brightness-0 invert" />
               </div>
             </div>
-            <h1 className="text-xl font-semibold mb-2">You're has been approved</h1>
+            <h1 className="text-xl font-semibold mb-2">You're account has been approved</h1>
             <p className="text-gray-500 mb-12">
               Access unlocked. You're no longer waiting — you made it. Now don't make it weird.
             </p>
