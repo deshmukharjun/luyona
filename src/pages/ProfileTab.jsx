@@ -70,7 +70,7 @@ export default function ProfileTab() {
         </div>
       )}
       <button
-        className="mt-8 w-full py-3 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 transition"
+        className="mt-8 w-full py-3 rounded-xl bg-black text-white font-semibold hover:bg-red-600 transition"
         onClick={handleLogout}
       >
         Logout
