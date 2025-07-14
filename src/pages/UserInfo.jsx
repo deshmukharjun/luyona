@@ -4,6 +4,8 @@ import {
   WheelPickerWrapper,
 } from "@ncdai/react-wheel-picker";
 import { useNavigate } from 'react-router-dom';
+import { getAuth } from "firebase/auth";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
 
 // Helper to get days in a month (handles leap years)
 const getDaysInMonth = (year, month) => {
@@ -43,11 +45,6 @@ export default function UserInfo() {
   const [favouritePlacesToGo, setFavouritePlacesToGo] = useState([]);
   const [currentFavouritePlaceToGoInput, setCurrentFavouritePlaceToGoInput] = useState("");
   const [favouritePlaceSuggestions, setFavouritePlaceSuggestions] = useState([]);
-
-  const [email, setEmail] = useState("");
-  const [showVerificationPopup, setShowVerificationPopup] = useState(false);
-  const [verificationType, setVerificationType] = useState("");
-  const [verificationValue, setVerificationValue] = useState("");
 
   const navigate = useNavigate();
 
@@ -95,14 +92,32 @@ export default function UserInfo() {
   }, []);
 
   // Total logical steps for the progress bar
-  const totalSteps = 8;
+  const totalSteps = 7;
   const progress = (step / totalSteps) * 100;
 
-  const handleNext = () => {
-    if (step === 8 && isStepEightValid) {
-      setVerificationType('email');
-      setVerificationValue(email);
-      setShowVerificationPopup(true);
+  const handleNext = async () => {
+    if (step === 7 && isStepSevenValid) {
+      // Save user info to Firestore
+      try {
+        const auth = getAuth();
+        const db = getFirestore();
+        const user = auth.currentUser;
+        if (!user) throw new Error("User not authenticated");
+        await setDoc(doc(db, "users", user.uid), {
+          firstName,
+          lastName,
+          gender: gender === "Other" ? customGender : gender,
+          dob,
+          currentLocation,
+          favouriteTravelDestination,
+          lastHolidayPlaces,
+          favouritePlacesToGo,
+          email: user.email,
+        });
+        navigate('/referral');
+      } catch (err) {
+        alert("Failed to save user info: " + err.message);
+      }
     } else if (step < totalSteps) {
       setStep(step + 1);
     }
@@ -113,25 +128,7 @@ export default function UserInfo() {
     setStep(step - 1);
   };
 
-  const handleVerificationConfirm = () => {
-    setShowVerificationPopup(false);
-    console.log({
-      firstName,
-      lastName,
-      gender: gender === "Other" ? customGender : gender,
-      dob,
-      currentLocation,
-      favouriteTravelDestination,
-      lastHolidayPlaces,
-      favouritePlacesToGo,
-      email,
-    });
-    navigate('/referral');
-  };
-
-  const handleVerificationEdit = () => {
-    setShowVerificationPopup(false);
-  };
+  // Remove handleVerificationConfirm and handleVerificationEdit
 
   // Generate options for the WheelPicker components
   const dayOptions = useMemo(() => {
@@ -239,7 +236,6 @@ export default function UserInfo() {
   const isStepFiveValid = favouriteTravelDestination.trim();
   const isStepSixValid = lastHolidayPlaces.length >= 3;
   const isStepSevenValid = favouritePlacesToGo.length >= 3;
-  const isStepEightValid = email.trim() && /\S+@\S+\.\S+/.test(email);
 
   const getNextButtonDisabled = () => {
     switch (step) {
@@ -250,7 +246,6 @@ export default function UserInfo() {
       case 5: return !isStepFiveValid;
       case 6: return !isStepSixValid;
       case 7: return !isStepSevenValid;
-      case 8: return !isStepEightValid;
       default: return true;
     }
   };
@@ -259,35 +254,7 @@ export default function UserInfo() {
     return "Next";
   };
 
-  const VerificationPopup = ({ type, value, onConfirm, onEdit }) => {
-    let title = "Confirm Email Address";
-    let displayValue = value;
-    let confirmButtonText = "Looks Good";
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
-        <div className="w-full bg-white p-6 rounded-t-xl shadow-lg relative">
-          <h2 className="text-xl font-semibold mb-2 text-center">{title}</h2>
-          <p className="text-gray-500 text-center text-sm mb-6">
-            Please confirm your email address for verification and account recovery.
-          </p>
-          <div className="flex justify-center mb-6">
-            <img src="/verify.svg" alt="Verify" className="w-24 h-24" />
-          </div>
-          <div className="flex items-center justify-between border border-gray-200 rounded-lg px-4 py-3 mb-6">
-            <span className="font-medium text-lg">{displayValue}</span>
-            <button onClick={onEdit} className="text-blue-500 text-sm font-semibold">Edit</button>
-          </div>
-          <button
-            onClick={onConfirm}
-            className={`w-full py-4 rounded-xl text-white font-medium text-sm bg-[#222222]`}
-          >
-            {confirmButtonText}
-          </button>
-        </div>
-      </div>
-    );
-  };
+  // Remove VerificationPopup component
 
   return (
     <div className="h-screen bg-white px-6 pt-10 flex flex-col font-sans">
@@ -743,47 +710,10 @@ export default function UserInfo() {
       )}
 
       {/* Step 8: Email Verification */}
-      {step === 8 && (
-        <>
-          <h1 className="text-xl font-semibold mb-6">What's your email?</h1>
-          <div className="relative mb-6">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="sheri13@gmail.com"
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm pr-10"
-            />
-            {email && (
-              <button
-                onClick={() => setEmail("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
-              >
-                ×
-              </button>
-            )}
-          </div>
-          <button
-            disabled={getNextButtonDisabled()}
-            onClick={handleNext}
-            className={`w-full py-4 rounded-xl text-white font-medium text-sm ${
-              getNextButtonDisabled() ? "bg-gray-300 cursor-not-allowed" : "bg-[#222222]"
-            }`}
-          >
-            {getNextButtonText()}
-          </button>
-        </>
-      )}
+      {/* This step is removed as per the edit hint. */}
 
       {/* Generic Verification Pop-up */}
-      {showVerificationPopup && (
-        <VerificationPopup
-          type={verificationType}
-          value={verificationValue}
-          onConfirm={handleVerificationConfirm}
-          onEdit={handleVerificationEdit}
-        />
-      )}
+      {/* This component is removed as per the edit hint. */}
     </div>
   );
 }

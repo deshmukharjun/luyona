@@ -64,10 +64,10 @@ export default function WaitlistStatus() {
       {/* Button container - pushed to the bottom */}
       <div className="pb-6 w-full flex justify-center">
         <button
-          onClick={() => console.log("Play a quiz clicked")} // Or navigate to a quiz page
+          onClick={() => navigate("/home")}
           className="w-full max-w-xs py-4 rounded-xl bg-[#222222] text-white font-medium text-sm"
         >
-          Play a quiz
+          Go to Home
         </button>
       </div>
 

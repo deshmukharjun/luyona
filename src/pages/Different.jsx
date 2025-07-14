@@ -40,7 +40,7 @@ export default function Privacy() {
       {/* CTA Button */}
       <div className="w-full px-6">
         <button
-          onClick={() => navigate("/mobile-verification")}
+          onClick={() => navigate("/login")}
           className="w-full py-4 mb-3 rounded-xl bg-[#222222] text-white text-sm font-medium"
         >
           Next
