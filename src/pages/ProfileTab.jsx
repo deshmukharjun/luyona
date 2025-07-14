@@ -47,8 +47,7 @@ export default function ProfileTab() {
   };
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-4 text-black">Your Profile</h2>
+    <div className="mt-5">
       {loading && <div className="text-center text-gray-500">Loading...</div>}
       {error && <div className="text-red-500 text-center">{error}</div>}
       {userInfo && (
