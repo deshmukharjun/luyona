@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { getAuth, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { getAuth, signOut, deleteUser } from "firebase/auth";
+import { doc, getDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../utils/firebase";
 import { useNavigate } from "react-router-dom";
 
@@ -15,6 +15,7 @@ export default function ProfileTab() {
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -46,6 +47,26 @@ export default function ProfileTab() {
     navigate("/login");
   };
 
+  const handleDeleteProfile = async () => {
+    if (!window.confirm("Are you sure you want to delete your profile? This action cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) throw new Error("User not logged in");
+      // Delete user document from Firestore
+      await deleteDoc(doc(db, "users", user.uid));
+      // Delete user from Firebase Auth
+      await deleteUser(user);
+      // Log out and redirect
+      navigate("/");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="mt-5">
       {loading && <div className="text-center text-gray-500">Loading...</div>}
@@ -73,6 +94,13 @@ export default function ProfileTab() {
         onClick={handleLogout}
       >
         Logout
+      </button>
+      <button
+        className="mt-3 w-full py-3 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-700 transition"
+        onClick={handleDeleteProfile}
+        disabled={deleting}
+      >
+        {deleting ? "Deleting..." : "Delete Profile"}
       </button>
     </div>
   );
