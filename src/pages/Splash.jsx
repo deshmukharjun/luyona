@@ -15,7 +15,12 @@ export default function Splash() {
           // Check if onboarding info exists
           const userDoc = await getDoc(doc(db, "users", user.uid));
           if (userDoc.exists()) {
-            navigate("/home", { replace: true });
+            const userData = userDoc.data();
+            if (userData.approval) {
+              navigate("/home", { replace: true });
+            } else {
+              navigate("/waitlist-status", { replace: true });
+            }
           } else {
             navigate("/user-info", { replace: true });
           }

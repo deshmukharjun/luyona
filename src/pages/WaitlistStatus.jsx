@@ -1,10 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getAuth } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../utils/firebase';
 
 export default function WaitlistStatus() {
   const navigate = useNavigate();
-  // State to control which screen is displayed
-  const [isUserApproved, setIsUserApproved] = useState(true); // Set to false initially
+  const [isUserApproved, setIsUserApproved] = useState(null); // null = loading
+
+  useEffect(() => {
+    const fetchApproval = async () => {
+      try {
+        const auth = getAuth();
+        const user = auth.currentUser;
+        if (!user) return setIsUserApproved(false);
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setIsUserApproved(!!userData.approval);
+        } else {
+          setIsUserApproved(false);
+        }
+      } catch {
+        setIsUserApproved(false);
+      }
+    };
+    fetchApproval();
+  }, []);
 
   return (
     <div className="h-screen bg-white px-6 pt-10 flex flex-col font-sans">
@@ -24,7 +46,9 @@ export default function WaitlistStatus() {
 
       {/* Main content area - centered */}
       <div className="flex flex-col flex-1 justify-center items-center text-center px-4">
-        {isUserApproved ? (
+        {isUserApproved === null ? (
+          <div className="text-gray-500">Checking approval status...</div>
+        ) : isUserApproved ? (
           // Approved Screen (without confetti)
           <>
             {/* Success icon with green tick and burst animation */}
@@ -63,12 +87,21 @@ export default function WaitlistStatus() {
 
       {/* Button container - pushed to the bottom */}
       <div className="pb-6 w-full flex justify-center">
-        <button
-          onClick={() => navigate("/home")}
-          className="w-full max-w-xs py-4 rounded-xl bg-[#222222] text-white font-medium text-sm"
-        >
-          Go to Home
-        </button>
+        {isUserApproved ? (
+          <button
+            onClick={() => navigate("/home")}
+            className="w-full max-w-xs py-4 rounded-xl bg-[#222222] text-white font-medium text-sm"
+          >
+            Go to Home
+          </button>
+        ) : (
+          <button
+            className="w-full max-w-xs py-4 rounded-xl bg-gray-300 text-gray-500 font-medium text-sm cursor-not-allowed"
+            disabled
+          >
+            Waiting for Approval
+          </button>
+        )}
       </div>
 
       {/* Custom CSS for animations */}

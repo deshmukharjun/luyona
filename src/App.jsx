@@ -11,6 +11,7 @@ import WaitlistStatus from "./pages/WaitlistStatus";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Home from "./pages/Home";
+import SettingsTab from "./pages/SettingsTab";
 import "@ncdai/react-wheel-picker/style.css";
 
 export default function App() {
@@ -29,6 +30,8 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/settings" element={<SettingsTab />} />
+        
         {/* Add more routes as needed */}
       </Routes>
     </Router>

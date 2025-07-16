@@ -1,19 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import HomeTab from "./HomeTab";
 import ExploreTab from "./ExploreTab";
 import MessagesTab from "./MessagesTab";
 import ProfileTab from "./ProfileTab";
+import GameTab from "./GameTab";
+import EditProfileTab from "./EditProfileTab";
+import SettingsTab from "./SettingsTab";
 
 const navOptions = [
-  { key: "home", label: "Home" },
-  { key: "explore", label: "Explore" },
-  { key: "messages", label: "Messages" },
-  { key: "profile", label: "Profile" },
+  { key: "matches", label: "Matches", icon: "/matches-icon.svg" },
+  { key: "game", label: "Game", icon: "/game-icon.svg" },
+  { key: "discover", label: "Discover", icon: "/discover-icon.svg" },
+  { key: "chats", label: "Chats", icon: "/chats-icon.svg" },
+  { key: "profile", label: "Profile", icon: "/profile-icon.svg" },
 ];
 
 export default function Home() {
-  const [selected, setSelected] = useState("home");
+  const [selected, setSelected] = useState("matches");
   const navigate = useNavigate();
 
   const handleBack = () => {
@@ -22,17 +26,34 @@ export default function Home() {
 
   let ContentComponent;
   switch (selected) {
-    case "home":
-      ContentComponent = HomeTab;
+    case "matches":
+      ContentComponent = HomeTab; // Placeholder, replace with MatchesTab if available
       break;
-    case "explore":
+    case "game":
+      ContentComponent = GameTab;
+      break;
+    case "discover":
       ContentComponent = ExploreTab;
       break;
-    case "messages":
+    case "chats":
       ContentComponent = MessagesTab;
       break;
     case "profile":
-      ContentComponent = ProfileTab;
+      // Nested routing for profile, edit-profile, and settings
+      ContentComponent = () => {
+        const [subTab, setSubTab] = useState("profile");
+        useEffect(() => {
+          // Listen to navigation events or implement your own logic to set subTab
+        }, []);
+        switch (window.location.pathname) {
+          case "/edit-profile":
+            return <EditProfileTab />;
+          case "/settings":
+            return <SettingsTab />;
+          default:
+            return <ProfileTab />;
+        }
+      };
       break;
     default:
       ContentComponent = HomeTab;
@@ -57,17 +78,34 @@ export default function Home() {
       </div>
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-sm flex justify-around items-center h-16">
-        {navOptions.map(opt => (
-          <button
-            key={opt.key}
-            className={`flex-1 flex flex-col items-center justify-center transition-all ${
-              selected === opt.key ? "text-black font-semibold" : "text-gray-400"
-            }`}
-            onClick={() => setSelected(opt.key)}
-          >
-            <span className="text-sm">{opt.label}</span>
-          </button>
-        ))}
+        {navOptions.map(opt => {
+          const isActive = selected === opt.key;
+          return (
+            <button
+              key={opt.key}
+              className={`flex-1 flex flex-col items-center justify-center transition-all focus:outline-none ${
+                isActive ? "text-black font-bold" : "text-gray-400 font-normal"
+              }`}
+              onClick={() => setSelected(opt.key)}
+            >
+              <img
+                src={opt.icon}
+                alt={opt.label}
+                className="mb-1"
+                style={{
+                  filter: isActive
+                    ? "invert(0%) brightness(0)"
+                    : "invert(60%) brightness(1)",
+                  width: 24,
+                  height: 24,
+                }}
+                width={24}
+                height={24}
+              />
+              <span className="text-xs mt-0.5">{opt.label}</span>
+            </button>
+          );
+        })}
       </nav>
     </div>
   );

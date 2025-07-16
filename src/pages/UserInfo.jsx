@@ -113,6 +113,7 @@ export default function UserInfo() {
           lastHolidayPlaces,
           favouritePlacesToGo,
           email: user.email,
+          approval: false, // Add approval field
         });
         navigate('/referral');
       } catch (err) {

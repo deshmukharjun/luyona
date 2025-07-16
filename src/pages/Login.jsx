@@ -21,7 +21,12 @@ export default function Login() {
       // Check if user info exists in Firestore
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
-        navigate("/home");
+        const userData = userDoc.data();
+        if (userData.approval) {
+          navigate("/home");
+        } else {
+          navigate("/waitlist-status");
+        }
       } else {
         navigate("/user-info");
       }
