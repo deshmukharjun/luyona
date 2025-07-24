@@ -17,7 +17,7 @@ export default function Splash() {
           if (userDoc.exists()) {
             const userData = userDoc.data();
             if (userData.approval) {
-              navigate("/home", { replace: true });
+              navigate("/user-intent", { replace: true });
             } else {
               navigate("/waitlist-status", { replace: true });
             }

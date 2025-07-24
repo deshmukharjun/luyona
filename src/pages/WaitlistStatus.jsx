@@ -39,7 +39,7 @@ export default function WaitlistStatus() {
           <img src="/backarrow.svg" alt="Back" width={24} height={24} />
         </button>
         <div className="text-gray-400 text-[14px] font-semibold mx-auto">
-          Luyona.
+          ThursDate.
         </div>
         <div style={{ width: 24 }}></div> {/* Spacer */}
       </div>
@@ -89,10 +89,10 @@ export default function WaitlistStatus() {
       <div className="pb-6 w-full flex justify-center">
         {isUserApproved ? (
           <button
-            onClick={() => navigate("/home")}
+            onClick={() => navigate("/user-intent")}
             className="w-full max-w-xs py-4 rounded-xl bg-[#222222] text-white font-medium text-sm"
           >
-            Go to Home
+            Continue
           </button>
         ) : (
           <button

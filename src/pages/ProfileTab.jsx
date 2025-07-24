@@ -56,7 +56,7 @@ export default function ProfileTab() {
       {loading && <div className="text-center text-gray-500">Loading...</div>}
       {error && <div className="text-red-500 text-center">{error}</div>}
       {/* Profile Header with background and avatar */}
-      <div className="relative h-72 rounded-b-2xl overflow-hidden shadow-md">
+      <div className="relative h-72 rounded-2xl overflow-hidden shadow-md mt-5">
         <img src={bgUrl} alt="Background" className="w-full h-full object-cover" />
         {/* Settings button */}
         <button
@@ -65,14 +65,26 @@ export default function ProfileTab() {
         >
           <img src="/setting-icon.svg" alt="Settings" className="w-6 h-6" />
         </button>
-        {/* Profile picture */}
+        {/* Profile picture at top right */}
+        {userInfo && userInfo.profilePicUrl && (
+          <div
+            className="absolute top-4 left-4 z-30 w-20 h-20 rounded-full border-4 border-white shadow-lg bg-white flex items-center justify-center"
+            style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.10)' }}
+          >
+            <img
+              src={userInfo.profilePicUrl}
+              alt="Profile"
+              className="w-full h-full object-cover rounded-full"
+            />
+          </div>
+        )}
+        {/* Profile picture at bottom center (existing, can be removed if not needed) */}
         <div className="absolute left-1/2 -bottom-12 transform -translate-x-1/2">
 
         </div>
       </div>
       {/* Main Info Card */}
       <div className="mt-16 px-4 flex flex-col items-center">
-        <div className="text-xs text-gray-400 mb-1">Date</div>
         <div className="text-2xl font-semibold text-gray-900">
           {userInfo ? `${userInfo.firstName || ''}${userInfo.lastName ? ', ' + userInfo.lastName : ''}${userInfo.dob ? ', ' + getAge(userInfo.dob) : ''}` : 'Name, Age'}
         </div>

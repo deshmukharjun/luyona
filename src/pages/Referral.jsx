@@ -174,7 +174,7 @@ export default function Referral() {
           <img src="/backarrow.svg" alt="Back" width={24} height={24} />
         </button>
         <div className="text-gray-400 text-[14px] font-semibold mx-auto">
-          Luyona.
+          ThursDate.
         </div>
         <div style={{ width: 24 }}></div> {/* Spacer to balance header */}
       </div>
@@ -278,7 +278,7 @@ export default function Referral() {
           <div className="bg-[#515151] rounded-xl shadow-lg w-72 text-center overflow-hidden">
             <div className="p-4 pt-5">
               <p className="text-white text-[17px] font-semibold mb-1">
-                "Luyona" would like to access your contacts
+                "ThursDate" would like to access your contacts
               </p>
               <p className="text-[#D0D0D0] text-[13px] leading-tight px-2">
                 To better understand your connection to our community, we recommend allowing full access on the next steps

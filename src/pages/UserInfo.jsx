@@ -6,6 +6,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from "firebase/auth";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { storage } from '../utils/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // Helper to get days in a month (handles leap years)
 const getDaysInMonth = (year, month) => {
@@ -45,6 +47,13 @@ export default function UserInfo() {
   const [favouritePlacesToGo, setFavouritePlacesToGo] = useState([]);
   const [currentFavouritePlaceToGoInput, setCurrentFavouritePlaceToGoInput] = useState("");
   const [favouritePlaceSuggestions, setFavouritePlaceSuggestions] = useState([]);
+
+  // Profile picture step state
+  const [profilePic, setProfilePic] = useState(null);
+  const [profilePicUrl, setProfilePicUrl] = useState("");
+  const [showPicModal, setShowPicModal] = useState(false);
+  const [uploadingPic, setUploadingPic] = useState(false);
+  const [picError, setPicError] = useState("");
 
   const navigate = useNavigate();
 
@@ -92,12 +101,12 @@ export default function UserInfo() {
   }, []);
 
   // Total logical steps for the progress bar
-  const totalSteps = 7;
+  const totalSteps = 8;
   const progress = (step / totalSteps) * 100;
 
   const handleNext = async () => {
-    if (step === 7 && isStepSevenValid) {
-      // Save user info to Firestore
+    if (step === 8 && profilePicUrl) {
+      // Save user info to Firestore (including profilePicUrl)
       try {
         const auth = getAuth();
         const db = getFirestore();
@@ -114,6 +123,7 @@ export default function UserInfo() {
           favouritePlacesToGo,
           email: user.email,
           approval: false, // Add approval field
+          profilePicUrl,
         });
         navigate('/referral');
       } catch (err) {
@@ -231,12 +241,13 @@ export default function UserInfo() {
     if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
       age--;
     }
-    return age >= 18;
+    return age >= 30;
   }, [dob]);
   const isStepFourValid = currentLocation.trim();
   const isStepFiveValid = favouriteTravelDestination.trim();
   const isStepSixValid = lastHolidayPlaces.length >= 3;
   const isStepSevenValid = favouritePlacesToGo.length >= 3;
+  const isStepEightValid = !!profilePicUrl;
 
   const getNextButtonDisabled = () => {
     switch (step) {
@@ -247,6 +258,7 @@ export default function UserInfo() {
       case 5: return !isStepFiveValid;
       case 6: return !isStepSixValid;
       case 7: return !isStepSevenValid;
+      case 8: return !isStepEightValid;
       default: return true;
     }
   };
@@ -256,6 +268,28 @@ export default function UserInfo() {
   };
 
   // Remove VerificationPopup component
+
+  // Profile picture upload handlers
+  const handlePicInput = async (e) => {
+    setPicError("");
+    const file = e.target.files[0];
+    if (!file) return;
+    setProfilePic(file);
+    setUploadingPic(true);
+    try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) throw new Error("User not authenticated");
+      const storageRef = ref(storage, `pfp/${user.uid}/face.jpg`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      setProfilePicUrl(url);
+    } catch (err) {
+      setPicError("Failed to upload image. Please try again.");
+    } finally {
+      setUploadingPic(false);
+    }
+  };
 
   return (
     <div className="h-screen bg-white px-6 pt-10 flex flex-col font-sans">
@@ -268,7 +302,7 @@ export default function UserInfo() {
           <img src="/backarrow.svg" alt="Back" width={24} height={24} />
         </button>
         <div className="text-gray-400 text-[14px] font-semibold mx-auto">
-          Luyona.
+          ThursDate.
         </div>
         <div style={{ width: 24 }}></div>
       </div>
@@ -416,7 +450,7 @@ export default function UserInfo() {
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
           </div>
           <p className="text-xs text-gray-400 mb-6">
-            Must be at least 18 years old
+            Must be at least 30 years old
           </p>
           <button
             disabled={getNextButtonDisabled()}
@@ -710,11 +744,92 @@ export default function UserInfo() {
         </>
       )}
 
-      {/* Step 8: Email Verification */}
-      {/* This step is removed as per the edit hint. */}
+      {/* Step 8: Profile Picture Upload */}
+      {step === 8 && (
+        <>
+          <h1 className="text-xl font-semibold mb-2">Face Verification</h1>
+          <p className="text-sm text-gray-500 mb-6">Upload a clear face photo.<br/>This won’t appear on your profile—it’s just to keep our community safe.</p>
+          <div className="flex flex-col items-center mb-6">
+            <div
+              className="w-32 h-32 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden mb-4 border-2 border-gray-200 relative cursor-pointer"
+              onClick={() => setShowPicModal(true)}
+              style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+            >
+              {profilePicUrl ? (
+                <img src={profilePicUrl} alt="Profile Preview" className="object-cover w-full h-full" />
+              ) : (
+                <span className="text-4xl text-gray-400">+</span>
+              )}
+              {uploadingPic && (
+                <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center">
+                  <span className="text-xs text-gray-500">Uploading...</span>
+                </div>
+              )}
+            </div>
+            <div className="text-xs text-gray-400 text-center">
+              <div className="mb-2 font-semibold">Pro Tip:</div>
+              <ul className="list-disc list-inside text-xs text-gray-400 text-left">
+                <li>Use a well-lit background</li>
+                <li>Look straight at the camera</li>
+                <li>No sunglasses or masks</li>
+              </ul>
+            </div>
+            {picError && <div className="text-red-500 text-xs mt-2">{picError}</div>}
+          </div>
+          <button
+            disabled={getNextButtonDisabled()}
+            onClick={handleNext}
+            className={`w-full py-4 rounded-xl text-white font-medium text-sm ${
+              getNextButtonDisabled() ? "bg-gray-300 cursor-not-allowed" : "bg-[#222222]"
+            }`}
+          >
+            Next
+          </button>
 
-      {/* Generic Verification Pop-up */}
-      {/* This component is removed as per the edit hint. */}
+          {/* Modal for Gallery/Camera selection */}
+          {showPicModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-end justify-center z-50">
+              <div className="w-full bg-white rounded-t-2xl p-6 pb-8 shadow-lg">
+                <div className="mb-4 text-center font-semibold">Upload a profile picture</div>
+                <div className="flex flex-col gap-3">
+                  <label className="w-full py-3 rounded-xl bg-gray-100 text-center cursor-pointer text-sm font-medium">
+                    Gallery
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        setShowPicModal(false);
+                        handlePicInput(e);
+                      }}
+                    />
+                  </label>
+                  <label className="w-full py-3 rounded-xl bg-gray-100 text-center cursor-pointer text-sm font-medium">
+                    Camera
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="user"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        setShowPicModal(false);
+                        handlePicInput(e);
+                      }}
+                    />
+                  </label>
+                </div>
+                <button
+                  className="w-full mt-4 py-2 rounded-xl bg-gray-200 text-gray-700 text-sm font-medium"
+                  onClick={() => setShowPicModal(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
     </div>
   );
 }

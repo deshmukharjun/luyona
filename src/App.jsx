@@ -12,6 +12,8 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Home from "./pages/Home";
 import SettingsTab from "./pages/SettingsTab";
+import EditProfileTab from "./pages/EditProfileTab";
+import UserIntent from "./pages/UserIntent";
 import "@ncdai/react-wheel-picker/style.css";
 
 export default function App() {
@@ -31,6 +33,8 @@ export default function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/home" element={<Home />} />
         <Route path="/settings" element={<SettingsTab />} />
+        <Route path="/edit-profile" element={<EditProfileTab />} />
+        <Route path="/user-intent" element={<UserIntent />} />
         
         {/* Add more routes as needed */}
       </Routes>
