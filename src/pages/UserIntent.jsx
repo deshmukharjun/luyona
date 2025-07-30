@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'; // Import useRef
 import { useNavigate } from 'react-router-dom';
-import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, updateDoc } from 'firebase/firestore';
-import { storage } from '../utils/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { userAPI, uploadAPI } from '../utils/api';
 
 const INTEREST_SUGGESTIONS = [
   'Travel', 'Food', 'Fitness', 'Music', 'Art', 'Tech', 'Books', 'Fashion', 'Outdoors', 'Sports', 'Gaming', 'Photography', 'Writing', 'Dancing', 'Cooking', 'Movies', 'TV Shows', 'Volunteering', 'Entrepreneurship', 'Wellness'
@@ -12,6 +9,7 @@ const INTEREST_SUGGESTIONS = [
 export default function UserIntent() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const navigate = useNavigate();
 
   // Step states
@@ -22,7 +20,8 @@ export default function UserIntent() {
   const [bio, setBio] = useState('');
   const [interests, setInterests] = useState([]);
   const [interestInput, setInterestInput] = useState('');
-  const [tvMovie, setTvMovie] = useState('');
+  const [tvShow, setTvShow] = useState('');
+  const [movie, setMovie] = useState('');
   const [watchList, setWatchList] = useState('');
   const [lifestyleImageUrls, setLifestyleImageUrls] = useState([null, null, null, null, null]);
   const [imgUploading, setImgUploading] = useState(false);
@@ -35,6 +34,34 @@ export default function UserIntent() {
   const sliderRef = useRef(null); // Ref for the slider container
 
   const totalSteps = 9;
+
+  // Load existing user intent data on component mount
+  useEffect(() => {
+    const loadExistingData = async () => {
+      try {
+        const userData = await userAPI.getProfile();
+        if (userData.intent) {
+          // Load existing intent data
+          setPurpose(userData.intent.purpose || '');
+          setRelationshipVibe(userData.intent.relationshipVibe || '');
+          setInterestedGender(userData.intent.interestedGender || '');
+          setAgeRange(userData.intent.preferredAgeRange || [40, 60]);
+          setBio(userData.intent.bio || '');
+          setInterests(userData.intent.interests || []);
+          setTvShow(userData.intent.tvShow || '');
+          setMovie(userData.intent.movie || '');
+          setWatchList(userData.intent.watchList || '');
+          setLifestyleImageUrls(userData.intent.lifestyleImageUrls || [null, null, null, null, null]);
+        }
+      } catch (error) {
+        console.error('Error loading existing data:', error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadExistingData();
+  }, []);
 
   // Tag input logic
   const addInterest = useCallback((val) => {
@@ -53,17 +80,10 @@ export default function UserIntent() {
     setImgError('');
     setImgUploading(true);
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error('User not authenticated. Please log in again.');
-      }
-      const storageRef = ref(storage, `lifestyle/${user.uid}/img${idx + 1}.jpg`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
+      const result = await uploadAPI.uploadLifestyleImage(file);
       setLifestyleImageUrls(prevUrls => {
         const newUrls = [...prevUrls];
-        newUrls[idx] = url;
+        newUrls[idx] = result.url;
         return newUrls;
       });
     } catch (err) {
@@ -83,24 +103,34 @@ export default function UserIntent() {
       case 4: return ageRange[0] < ageRange[1];
       case 5: return bio.trim().length > 0;
       case 6: return interests.length > 0;
-      case 7: return tvMovie.trim().length > 0;
+      case 7: return tvShow.trim().length > 0 && movie.trim().length > 0;
       case 8: return watchList.trim().length > 0;
       case 9: return lifestyleImageUrls.filter(Boolean).length === 5;
       default: return false;
     }
-  }, [step, purpose, relationshipVibe, interestedGender, ageRange, bio, interests, tvMovie, watchList, lifestyleImageUrls]);
+  }, [step, purpose, relationshipVibe, interestedGender, ageRange, bio, interests, tvShow, movie, watchList, lifestyleImageUrls]);
 
-  // Save all data to Firestore
+  // Save all data to backend
   const handleFinish = async () => {
     setLoading(true);
     try {
-      const auth = getAuth();
-      const db = getFirestore();
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error('User not authenticated. Please log in again.');
-      }
-      await updateDoc(doc(db, 'users', user.uid), {
+      // First, get the current user profile to preserve existing data
+      const currentProfile = await userAPI.getProfile();
+      
+      // Update with both existing user info and new intent data
+      await userAPI.updateProfile({
+        // Preserve existing user info
+        firstName: currentProfile.firstName,
+        lastName: currentProfile.lastName,
+        gender: currentProfile.gender,
+        dob: currentProfile.dob,
+        currentLocation: currentProfile.currentLocation,
+        favouriteTravelDestination: currentProfile.favouriteTravelDestination,
+        lastHolidayPlaces: currentProfile.lastHolidayPlaces,
+        favouritePlacesToGo: currentProfile.favouritePlacesToGo,
+        profilePicUrl: currentProfile.profilePicUrl,
+        
+        // Add new intent data
         intent: {
           purpose,
           relationshipVibe,
@@ -108,7 +138,8 @@ export default function UserIntent() {
           preferredAgeRange: ageRange,
           bio,
           interests,
-          tvMovie,
+          tvShow,
+          movie,
           watchList,
           lifestyleImageUrls,
         },
@@ -117,7 +148,7 @@ export default function UserIntent() {
       navigate('/home');
     } catch (err) {
       alert('Failed to save user intent: ' + err.message);
-      console.error("Firestore save error:", err);
+      console.error("Backend save error:", err);
     } finally {
       setLoading(false);
     }
@@ -314,14 +345,30 @@ export default function UserIntent() {
         );
       case 7:
         return (
-          <input
-            type="text"
-            className="w-full border border-gray-200 rounded-lg p-3 mb-4 text-base"
-            value={tvMovie}
-            onChange={e => setTvMovie(e.target.value)}
-            placeholder="e.g. Breaking Bad, Inception"
-            maxLength={100}
-          />
+          <>
+            <div className="mb-6">
+              <label className="block text-base font-medium mb-2">What’s that one TV show you could rewatch anytime?</label>
+              <input
+                type="text"
+                className="w-full border border-gray-200 rounded-lg p-3 mb-4 text-base"
+                value={tvShow}
+                onChange={e => setTvShow(e.target.value)}
+                placeholder="Enter your favourite TV show"
+                maxLength={100}
+              />
+            </div>
+            <div>
+              <label className="block text-base font-medium mb-2">Which movie never gets old for you?</label>
+              <input
+                type="text"
+                className="w-full border border-gray-200 rounded-lg p-3 mb-4 text-base"
+                value={movie}
+                onChange={e => setMovie(e.target.value)}
+                placeholder="Enter your favourite movie"
+                maxLength={100}
+              />
+            </div>
+          </>
         );
       case 8:
         return (
@@ -370,7 +417,7 @@ export default function UserIntent() {
       default:
         return null;
     }
-  }, [step, purpose, relationshipVibe, interestedGender, ageRange, bio, interests, interestInput, tvMovie, watchList, lifestyleImageUrls, imgUploading, imgError, addInterest, removeInterest, handleLifestyleImageChange, activeThumb, minAge, maxAge]);
+  }, [step, purpose, relationshipVibe, interestedGender, ageRange, bio, interests, interestInput, tvShow, movie, watchList, lifestyleImageUrls, imgUploading, imgError, addInterest, removeInterest, handleLifestyleImageChange, activeThumb, minAge, maxAge]);
 
   // Function to render the sticky header/question for each step
   const renderStepHeader = useCallback(() => {
@@ -403,7 +450,7 @@ export default function UserIntent() {
           </>
         );
       case 7:
-        return <h1 className="text-2xl font-semibold mb-3 mt-0">What's the one TV show and one movie?</h1>;
+        return <h1 className="text-2xl font-semibold mb-3 mt-0">What’s that one TV show and one movie?</h1>;
       case 8:
         return <h1 className="text-2xl font-semibold mb-3 mt-0">Current watch list?</h1>;
       case 9:
@@ -463,6 +510,14 @@ export default function UserIntent() {
       document.body.style.cursor = ''; // Reset cursor
     };
   }, [activeThumb, ageRange, minAge, maxAge]);
+
+  if (initialLoading) {
+    return (
+      <div className="h-screen bg-white flex justify-center items-center">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-white px-6 pt-10 flex flex-col font-sans">

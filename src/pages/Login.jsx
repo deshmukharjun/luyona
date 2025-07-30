@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "../utils/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { authAPI, userAPI } from "../utils/api";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -16,18 +14,17 @@ export default function Login() {
     setLoading(true);
     setError("");
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      // Check if user info exists in Firestore
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
+      await authAPI.login(email, password);
+      // Check if user profile exists
+      try {
+        const userData = await userAPI.getProfile();
         if (userData.approval) {
           navigate("/home");
         } else {
           navigate("/waitlist-status");
         }
-      } else {
+      } catch (profileError) {
+        // If profile doesn't exist, go to user-info
         navigate("/user-info");
       }
     } catch (err) {

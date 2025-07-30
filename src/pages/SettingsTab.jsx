@@ -1,6 +1,4 @@
-import { getAuth, signOut, deleteUser } from "firebase/auth";
-import { doc, deleteDoc } from "firebase/firestore";
-import { db } from "../utils/firebase";
+import { authAPI } from "../utils/api";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
@@ -19,7 +17,7 @@ export default function SettingsTab() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await signOut(getAuth());
+    authAPI.logout();
     navigate("/login");
   };
 
@@ -27,11 +25,8 @@ export default function SettingsTab() {
     if (!window.confirm("Are you sure you want to delete your profile? This action cannot be undone.")) return;
     setDeleting(true);
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) throw new Error("User not logged in");
-      await deleteDoc(doc(db, "users", user.uid));
-      await deleteUser(user);
+      await authAPI.deleteAccount();
+      authAPI.logout();
       navigate("/");
     } catch (err) {
       setError(err.message);

@@ -1,33 +1,40 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "../utils/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { authAPI, userAPI } from "../utils/api";
 
 export default function Splash() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       // Check auth state
-      onAuthStateChanged(auth, async (user) => {
-        if (user) {
+      if (authAPI.isAuthenticated()) {
+        try {
           // Check if onboarding info exists
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
+          const userData = await userAPI.getProfile();
+          
+          // Check if user has completed both UserInfo and UserIntent
+          if (userData.onboardingComplete) {
+            // User has completed both UserInfo and UserIntent
             if (userData.approval) {
-              navigate("/user-intent", { replace: true });
+              navigate("/home", { replace: true });
             } else {
               navigate("/waitlist-status", { replace: true });
             }
+          } else if (userData.firstName && userData.lastName) {
+            // User has completed UserInfo but not UserIntent
+            navigate("/user-intent", { replace: true });
           } else {
+            // User hasn't completed UserInfo yet
             navigate("/user-info", { replace: true });
           }
-        } else {
-          navigate("/gateway", { replace: true });
+        } catch (error) {
+          // If profile doesn't exist, go to user-info
+          navigate("/user-info", { replace: true });
         }
-      });
+      } else {
+        navigate("/gateway", { replace: true });
+      }
     }, 1000); // Shorter splash for better UX
     return () => clearTimeout(timer);
   }, [navigate]);

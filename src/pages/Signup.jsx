@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../utils/firebase";
+import { authAPI } from "../utils/api";
 
 export default function Signup() {
   const [email, setEmail] = useState("");
@@ -15,7 +14,7 @@ export default function Signup() {
     setLoading(true);
     setError("");
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      await authAPI.register(email, password);
       navigate("/user-info");
     } catch (err) {
       setError(err.message);

@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getAuth } from "firebase/auth";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "../utils/firebase";
+import { userAPI } from "../utils/api";
 import { useNavigate } from "react-router-dom";
 
 const navOptions = [
@@ -26,7 +24,7 @@ export default function EditProfileTab() {
   const [modalError, setModalError] = useState("");
   const [modalAbout, setModalAbout] = useState({ gender: "", dob: "", currentLocation: "", work: "" });
   const [modalInterest, setModalInterest] = useState([]);
-  const [modalBinge, setModalBinge] = useState({ tvMovie: "", watchList: "" });
+  const [modalBinge, setModalBinge] = useState({ tvShow: '', movie: '', watchList: '' });
 
 
   useEffect(() => {
@@ -34,16 +32,8 @@ export default function EditProfileTab() {
       setLoading(true);
       setError("");
       try {
-        const auth = getAuth();
-        const user = auth.currentUser;
-        if (!user) throw new Error("User not logged in");
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setUserInfo(docSnap.data());
-        } else {
-          setError("No user info found.");
-        }
+        const userData = await userAPI.getProfile();
+        setUserInfo(userData);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -67,11 +57,7 @@ export default function EditProfileTab() {
     setError("");
     setSuccess("");
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) throw new Error("User not logged in");
-      const docRef = doc(db, "users", user.uid);
-      await updateDoc(docRef, userInfo);
+      await userAPI.updateProfile(userInfo);
       setSuccess("Profile updated successfully!");
     } catch (err) {
       setError(err.message);
@@ -89,7 +75,6 @@ export default function EditProfileTab() {
     } else if (section === "about") {
       setModalAbout({
         gender: userInfo?.gender || "",
-        dob: userInfo?.dob || "",
         currentLocation: userInfo?.currentLocation || "",
         work: userInfo?.work || "",
       });
@@ -97,8 +82,9 @@ export default function EditProfileTab() {
       setModalInterest(userInfo?.intent?.interests || []);
     } else if (section === "bingebox") {
       setModalBinge({
-        tvMovie: userInfo?.intent?.tvMovie || "",
-        watchList: userInfo?.intent?.watchList || "",
+        tvShow: userInfo?.intent?.tvShow || '',
+        movie: userInfo?.intent?.movie || '',
+        watchList: userInfo?.intent?.watchList || '',
       });
     }
     setModalOpen(true);
@@ -109,34 +95,38 @@ export default function EditProfileTab() {
     setModalLoading(true);
     setModalError("");
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) throw new Error("User not logged in");
-      const docRef = doc(db, "users", user.uid);
+      let updateData = {};
+      
       if (modalSection === "bio") {
-        await updateDoc(docRef, { "intent.bio": modalValue });
+        updateData = { intent: { ...userInfo.intent, bio: modalValue } };
         setUserInfo((prev) => ({ ...prev, intent: { ...prev.intent, bio: modalValue } }));
       } else if (modalSection === "about") {
-        await updateDoc(docRef, {
+        updateData = {
           gender: modalAbout.gender,
           dob: modalAbout.dob,
           currentLocation: modalAbout.currentLocation,
           work: modalAbout.work,
-        });
+        };
         setUserInfo((prev) => ({ ...prev, ...modalAbout }));
       } else if (modalSection === "interest") {
-        await updateDoc(docRef, { "intent.interests": modalInterest });
+        updateData = { intent: { ...userInfo.intent, interests: modalInterest } };
         setUserInfo((prev) => ({ ...prev, intent: { ...prev.intent, interests: modalInterest } }));
       } else if (modalSection === "bingebox") {
-        await updateDoc(docRef, {
-          "intent.tvMovie": modalBinge.tvMovie,
-          "intent.watchList": modalBinge.watchList,
-        });
+        updateData = {
+          intent: { 
+            ...userInfo.intent, 
+            tvShow: modalBinge.tvShow, 
+            movie: modalBinge.movie, 
+            watchList: modalBinge.watchList 
+          }
+        };
         setUserInfo((prev) => ({
           ...prev,
-          intent: { ...prev.intent, tvMovie: modalBinge.tvMovie, watchList: modalBinge.watchList },
+          intent: { ...prev.intent, tvShow: modalBinge.tvShow, movie: modalBinge.movie, watchList: modalBinge.watchList },
         }));
       }
+      
+      await userAPI.updateProfile(updateData);
       setModalOpen(false);
     } catch (err) {
       setModalError(err.message);
@@ -175,7 +165,12 @@ export default function EditProfileTab() {
                 <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">No Image</div>
               )}
             </div>
-            <button className="mt-2 px-4 py-1 rounded-lg bg-black text-white text-sm font-semibold">Edit profile picture</button>
+            <button 
+              className="mt-2 px-4 py-1 rounded-lg bg-black text-white text-sm font-semibold"
+              onClick={() => navigate('/edit-profile-picture')}
+            >
+              Edit profile picture
+            </button>
           </div>
         </div>
         {/* Lifestyle Pictures Card */}
@@ -195,7 +190,12 @@ export default function EditProfileTab() {
               <div className="w-full h-20 bg-gray-100 flex items-center justify-center text-gray-400 rounded-lg">No Images</div>
             )}
           </div>
-          <button className="mt-2 px-4 py-1 rounded-lg bg-black text-white text-sm font-semibold">Edit lifestyle pictures</button>
+          <button 
+            className="mt-2 px-4 py-1 rounded-lg bg-black text-white text-sm font-semibold"
+            onClick={() => navigate('/edit-lifestyle-images')}
+          >
+            Edit lifestyle pictures
+          </button>
         </div>
         {/* Bio Card */}
         <div className="bg-white rounded-xl shadow p-4 mb-4">
@@ -215,9 +215,6 @@ export default function EditProfileTab() {
           <div className="text-sm text-gray-700 space-y-1">
             {userInfo && userInfo.gender && (
               <div><span className="font-medium">Gender</span> <span className="ml-2">{userInfo.gender}</span></div>
-            )}
-            {userInfo && userInfo.dob && (
-              <div><span className="font-medium">Age</span> <span className="ml-2">{userInfo.dob}</span></div>
             )}
             {userInfo && userInfo.currentLocation && (
               <div><span className="font-medium">Lives in</span> <span className="ml-2">{userInfo.currentLocation}</span></div>
@@ -248,8 +245,9 @@ export default function EditProfileTab() {
             <button className="ml-auto text-xs text-blue-600 font-semibold" onClick={() => openModal("bingebox")}>Edit</button>
           </div>
           <div className="text-sm text-gray-700 space-y-1">
-            <div><span className="font-medium">Favourite TV show</span> <span className="ml-2">{userInfo && userInfo.intent && userInfo.intent.tvMovie ? userInfo.intent.tvMovie : 'Not set'}</span></div>
-            <div><span className="font-medium">Favourite movie</span> <span className="ml-2">{userInfo && userInfo.intent && userInfo.intent.watchList ? userInfo.intent.watchList : 'Not set'}</span></div>
+            <div><span className="font-medium">Favourite TV show</span> <span className="ml-2">{userInfo && userInfo.intent && userInfo.intent.tvShow ? userInfo.intent.tvShow : 'Not set'}</span></div>
+            <div><span className="font-medium">Favourite movie</span> <span className="ml-2">{userInfo && userInfo.intent && userInfo.intent.movie ? userInfo.intent.movie : 'Not set'}</span></div>
+            <div><span className="font-medium">Current watch list</span> <span className="ml-2">{userInfo && userInfo.intent && userInfo.intent.watchList ? userInfo.intent.watchList : 'Not set'}</span></div>
           </div>
         </div>
       </div>
@@ -301,7 +299,6 @@ export default function EditProfileTab() {
             {modalSection === "about" && (
               <div className="space-y-3">
                 <input type="text" className="w-full border rounded-lg px-3 py-2" placeholder="Gender" value={modalAbout.gender} onChange={e => setModalAbout(a => ({ ...a, gender: e.target.value }))} />
-                <input type="date" className="w-full border rounded-lg px-3 py-2" placeholder="DOB" value={modalAbout.dob} onChange={e => setModalAbout(a => ({ ...a, dob: e.target.value }))} />
                 <input type="text" className="w-full border rounded-lg px-3 py-2" placeholder="Current Location" value={modalAbout.currentLocation} onChange={e => setModalAbout(a => ({ ...a, currentLocation: e.target.value }))} />
                 <input type="text" className="w-full border rounded-lg px-3 py-2" placeholder="Work" value={modalAbout.work} onChange={e => setModalAbout(a => ({ ...a, work: e.target.value }))} />
               </div>
@@ -331,8 +328,9 @@ export default function EditProfileTab() {
             )}
             {modalSection === "bingebox" && (
               <div className="space-y-3">
-                <input type="text" className="w-full border rounded-lg px-3 py-2" placeholder="Favourite TV show" value={modalBinge.tvMovie} onChange={e => setModalBinge(b => ({ ...b, tvMovie: e.target.value }))} />
-                <input type="text" className="w-full border rounded-lg px-3 py-2" placeholder="Favourite movie" value={modalBinge.watchList} onChange={e => setModalBinge(b => ({ ...b, watchList: e.target.value }))} />
+                <input type="text" className="w-full border rounded-lg px-3 py-2" placeholder="Favourite TV show" value={modalBinge.tvShow} onChange={e => setModalBinge(b => ({ ...b, tvShow: e.target.value }))} />
+                <input type="text" className="w-full border rounded-lg px-3 py-2" placeholder="Favourite movie" value={modalBinge.movie} onChange={e => setModalBinge(b => ({ ...b, movie: e.target.value }))} />
+                <input type="text" className="w-full border rounded-lg px-3 py-2" placeholder="Current watch list" value={modalBinge.watchList} onChange={e => setModalBinge(b => ({ ...b, watchList: e.target.value }))} />
               </div>
             )}
             {modalError && <div className="text-red-500 text-sm mt-2">{modalError}</div>}

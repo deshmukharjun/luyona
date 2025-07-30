@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import { getAuth } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../utils/firebase";
+import { userAPI } from "../utils/api";
 import { useNavigate } from "react-router-dom";
 
 export default function ProfileTab() {
@@ -15,16 +13,8 @@ export default function ProfileTab() {
       setLoading(true);
       setError("");
       try {
-        const auth = getAuth();
-        const user = auth.currentUser;
-        if (!user) throw new Error("User not logged in");
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setUserInfo(docSnap.data());
-        } else {
-          setError("No user info found.");
-        }
+        const userData = await userAPI.getProfile();
+        setUserInfo(userData);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -65,7 +55,7 @@ export default function ProfileTab() {
         >
           <img src="/setting-icon.svg" alt="Settings" className="w-6 h-6" />
         </button>
-        {/* Profile picture at top right */}
+        {/* Profile picture at top left */}
         {userInfo && userInfo.profilePicUrl && (
           <div
             className="absolute top-4 left-4 z-30 w-20 h-20 rounded-full border-4 border-white shadow-lg bg-white flex items-center justify-center"
@@ -78,10 +68,6 @@ export default function ProfileTab() {
             />
           </div>
         )}
-        {/* Profile picture at bottom center (existing, can be removed if not needed) */}
-        <div className="absolute left-1/2 -bottom-12 transform -translate-x-1/2">
-
-        </div>
       </div>
       {/* Main Info Card */}
       <div className="mt-16 px-4 flex flex-col items-center">
@@ -106,50 +92,125 @@ export default function ProfileTab() {
         </button>
       </div>
       {/* Bio Card */}
-      <div className="mt-8 px-4">
-        <div className="bg-white rounded-xl shadow p-4 mb-4 relative">
-          <div className="flex items-center gap-2 mb-2">
-            <button className="text-xs font-semibold bg-black text-white rounded px-2 py-0.5">Read</button>
-            <button className="text-xs font-semibold text-gray-400 rounded px-2 py-0.5">Listen</button>
+      <div className="mt-8 px-4 flex flex-col gap-4">
+        <div className="bg-white rounded-xl shadow p-4 mb-0 relative">
+          <div className="flex items-center gap-2 mb-2 font-semibold text-gray-700">Bio
             <button className="ml-auto" onClick={() => navigate('/edit-profile')}>
               <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19.5 3 21l1.5-4L16.5 3.5z"/></svg>
             </button>
           </div>
           <div className="text-gray-700 text-sm">
-            {userInfo && userInfo.bio
-              ? userInfo.bio
+            {userInfo && ((userInfo.intent && userInfo.intent.bio) ? userInfo.intent.bio : userInfo.bio)
+              ? (userInfo.intent && userInfo.intent.bio ? userInfo.intent.bio : userInfo.bio)
               : 'No bio set yet.'}
           </div>
         </div>
         {/* About Card */}
-        <div className="bg-white rounded-xl shadow p-4 relative">
+        <div className="bg-white rounded-xl shadow p-4 relative mb-0">
           <div className="flex items-center gap-2 mb-2 font-semibold text-gray-700">About
             <button className="ml-auto" onClick={() => navigate('/edit-profile')}>
               <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19.5 3 21l1.5-4L16.5 3.5z"/></svg>
             </button>
           </div>
-          <div className="text-sm text-gray-700 space-y-1">
-            {userInfo && userInfo.gender && (
-              <div><span className="font-medium">Gender</span> <span className="ml-2">{userInfo.gender}</span></div>
+          <div className="text-sm text-gray-700 space-y-3">
+            <div>
+              <div className="text-xs text-gray-400 font-semibold mb-1">Gender</div>
+              <div className="flex items-center gap-2">
+                {/* No icon for gender */}
+                <span>{userInfo && userInfo.gender}</span>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-400 font-semibold mb-1">Age</div>
+              <div className="flex items-center gap-2">
+                <img src="/age-icon.svg" alt="Age" className="w-4 h-4" />
+                <span>{userInfo && userInfo.dob ? getAge(userInfo.dob) + ' Years' : ''}</span>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-400 font-semibold mb-1">Lives In</div>
+              <div className="flex items-center gap-2">
+                <img src="/location-icon.svg" alt="Location" className="w-4 h-4" />
+                <span>{userInfo && userInfo.currentLocation}</span>
+              </div>
+            </div>
+            {userInfo && userInfo.from && (
+              <div>
+                <div className="text-xs text-gray-400 font-semibold mb-1">From</div>
+                <div className="flex items-center gap-2">
+                  <img src="/location-icon.svg" alt="From" className="w-4 h-4" />
+                  <span>{userInfo.from}</span>
+                </div>
+              </div>
             )}
-            {userInfo && userInfo.dob && (
-              <div><span className="font-medium">Age</span> <span className="ml-2">{getAge(userInfo.dob)} Years</span></div>
+            {userInfo && userInfo.instagram && (
+              <div>
+                <div className="text-xs text-gray-400 font-semibold mb-1">Instagram</div>
+                <div className="flex items-center gap-2">
+                  {/* Instagram icon can remain inline or be replaced if you have a file */}
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" stroke="#A0AEC0" strokeWidth="2"/><circle cx="12" cy="12" r="5" stroke="#A0AEC0" strokeWidth="2"/><circle cx="17.5" cy="6.5" r="1.5" fill="#A0AEC0"/></svg>
+                  <span className="text-blue-600">@{userInfo.instagram}</span>
+                </div>
+              </div>
             )}
-            {userInfo && userInfo.currentLocation && (
-              <div><span className="font-medium">Lives in</span> <span className="ml-2">{userInfo.currentLocation}</span></div>
+            {userInfo && userInfo.linkedin && (
+              <div>
+                <div className="text-xs text-gray-400 font-semibold mb-1">LinkedIn</div>
+                <div className="flex items-center gap-2">
+                  {/* LinkedIn icon can remain inline or be replaced if you have a file */}
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" stroke="#A0AEC0" strokeWidth="2"/><path d="M7 10v7" stroke="#A0AEC0" strokeWidth="2" strokeLinecap="round"/><path d="M7 7v.01" stroke="#A0AEC0" strokeWidth="2" strokeLinecap="round"/><path d="M11 14v-4a2 2 0 1 1 4 0v4" stroke="#A0AEC0" strokeWidth="2" strokeLinecap="round"/><path d="M11 17v-3.5" stroke="#A0AEC0" strokeWidth="2" strokeLinecap="round"/></svg>
+                  <a href={userInfo.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-600 break-all">{userInfo.linkedin}</a>
+                </div>
+              </div>
             )}
-            {userInfo && userInfo.favouriteTravelDestination && (
-              <div><span className="font-medium">Favourite Travel Destination</span> <span className="ml-2">{userInfo.favouriteTravelDestination}</span></div>
+          </div>
+        </div>
+        {/* Interest Card */}
+        <div className="bg-white rounded-xl shadow p-4 relative mb-0">
+          <div className="flex items-center gap-2 mb-2 font-semibold text-gray-900">Interest
+            <button className="ml-auto" onClick={() => navigate('/edit-profile')}>
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19.5 3 21l1.5-4L16.5 3.5z"/></svg>
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {userInfo && userInfo.intent && userInfo.intent.interests && userInfo.intent.interests.length > 0 ? (
+              userInfo.intent.interests.map((interest, idx) => (
+                <span key={idx} className="bg-gray-100 px-3 py-1 rounded-full text-xs text-gray-700">{interest}</span>
+              ))
+            ) : (
+              <span className="text-gray-400 text-xs">No interests set yet.</span>
             )}
-            {userInfo && userInfo.lastHolidayPlaces && userInfo.lastHolidayPlaces.length > 0 && (
-              <div><span className="font-medium">Last Holiday Places</span> <span className="ml-2">{userInfo.lastHolidayPlaces.map(p => p.name).join(', ')}</span></div>
-            )}
-            {userInfo && userInfo.favouritePlacesToGo && userInfo.favouritePlacesToGo.length > 0 && (
-              <div><span className="font-medium">Favourite Places to Go</span> <span className="ml-2">{userInfo.favouritePlacesToGo.map(p => p.name).join(', ')}</span></div>
-            )}
-            {userInfo && userInfo.email && (
-              <div><span className="font-medium">Email</span> <span className="ml-2 text-blue-600">{userInfo.email}</span></div>
-            )}
+          </div>
+        </div>
+        {/* BingeBox Card */}
+        <div className="bg-white rounded-xl shadow p-4 relative mb-0">
+          <div className="flex items-center gap-2 mb-2 font-semibold text-gray-900">BingeBox
+            <button className="ml-auto" onClick={() => navigate('/edit-profile')}>
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19.5 3 21l1.5-4L16.5 3.5z"/></svg>
+            </button>
+          </div>
+          <div className="text-sm text-gray-700 space-y-4">
+            <div>
+              <div className="text-xs text-gray-400 font-semibold mb-1">favourite TV show</div>
+              <div className="flex items-center gap-2">
+                <img src="/tvshow-icon.svg" alt="TV Show" className="w-4 h-4" />
+                <span>{userInfo && userInfo.intent && userInfo.intent.tvShow ? userInfo.intent.tvShow : 'Not set'}</span>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-400 font-semibold mb-1">favourite movie</div>
+              <div className="flex items-center gap-2">
+                <img src="/movie-icon.svg" alt="Movie" className="w-4 h-4" />
+                <span>{userInfo && userInfo.intent && userInfo.intent.movie ? userInfo.intent.movie : 'Not set'}</span>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-400 font-semibold mb-1">Watchlists</div>
+              <div className="flex items-center gap-2">
+                <img src="/watchlist-icon.svg" alt="Watchlist" className="w-4 h-4" />
+                <span>{userInfo && userInfo.intent && userInfo.intent.watchList ? userInfo.intent.watchList : 'Not set'}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

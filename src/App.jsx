@@ -13,7 +13,13 @@ import Signup from "./pages/Signup";
 import Home from "./pages/Home";
 import SettingsTab from "./pages/SettingsTab";
 import EditProfileTab from "./pages/EditProfileTab";
+import EditProfilePicture from "./pages/EditProfilePicture";
+import EditLifestyleImages from "./pages/EditLifestyleImages";
 import UserIntent from "./pages/UserIntent";
+import AdminLogin from "./pages/AdminLogin";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminWaitlist from "./pages/AdminWaitlist";
+import AdminUsers from "./pages/AdminUsers";
 import "@ncdai/react-wheel-picker/style.css";
 
 export default function App() {
@@ -34,7 +40,15 @@ export default function App() {
         <Route path="/home" element={<Home />} />
         <Route path="/settings" element={<SettingsTab />} />
         <Route path="/edit-profile" element={<EditProfileTab />} />
+        <Route path="/edit-profile-picture" element={<EditProfilePicture />} />
+        <Route path="/edit-lifestyle-images" element={<EditLifestyleImages />} />
         <Route path="/user-intent" element={<UserIntent />} />
+        
+        {/* Admin Routes */}
+        <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/waitlist" element={<AdminWaitlist />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
         
         {/* Add more routes as needed */}
       </Routes>

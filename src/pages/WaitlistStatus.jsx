@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAuth } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../utils/firebase';
+import { userAPI } from '../utils/api';
 
 export default function WaitlistStatus() {
   const navigate = useNavigate();
@@ -11,16 +9,8 @@ export default function WaitlistStatus() {
   useEffect(() => {
     const fetchApproval = async () => {
       try {
-        const auth = getAuth();
-        const user = auth.currentUser;
-        if (!user) return setIsUserApproved(false);
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setIsUserApproved(!!userData.approval);
-        } else {
-          setIsUserApproved(false);
-        }
+        const userData = await userAPI.getProfile();
+        setIsUserApproved(!!userData.approval);
       } catch {
         setIsUserApproved(false);
       }

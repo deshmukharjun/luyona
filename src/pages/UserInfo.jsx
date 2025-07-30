@@ -4,10 +4,7 @@ import {
   WheelPickerWrapper,
 } from "@ncdai/react-wheel-picker";
 import { useNavigate } from 'react-router-dom';
-import { getAuth } from "firebase/auth";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
-import { storage } from '../utils/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { authAPI, userAPI, uploadAPI } from '../utils/api';
 
 // Helper to get days in a month (handles leap years)
 const getDaysInMonth = (year, month) => {
@@ -106,13 +103,9 @@ export default function UserInfo() {
 
   const handleNext = async () => {
     if (step === 8 && profilePicUrl) {
-      // Save user info to Firestore (including profilePicUrl)
+      // Save user info to backend (including profilePicUrl)
       try {
-        const auth = getAuth();
-        const db = getFirestore();
-        const user = auth.currentUser;
-        if (!user) throw new Error("User not authenticated");
-        await setDoc(doc(db, "users", user.uid), {
+        await userAPI.saveProfile({
           firstName,
           lastName,
           gender: gender === "Other" ? customGender : gender,
@@ -121,8 +114,6 @@ export default function UserInfo() {
           favouriteTravelDestination,
           lastHolidayPlaces,
           favouritePlacesToGo,
-          email: user.email,
-          approval: false, // Add approval field
           profilePicUrl,
         });
         navigate('/referral');
@@ -277,13 +268,8 @@ export default function UserInfo() {
     setProfilePic(file);
     setUploadingPic(true);
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) throw new Error("User not authenticated");
-      const storageRef = ref(storage, `pfp/${user.uid}/face.jpg`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-      setProfilePicUrl(url);
+      const result = await uploadAPI.uploadProfilePicture(file);
+      setProfilePicUrl(result.url);
     } catch (err) {
       setPicError("Failed to upload image. Please try again.");
     } finally {
